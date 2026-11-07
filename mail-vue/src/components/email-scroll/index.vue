@@ -3,6 +3,7 @@
     <div class="header-actions">
       <el-checkbox
           v-model="checkAll"
+          aria-label="选择全部邮件"
           :indeterminate="isIndeterminate"
           :disabled="!emailList.length || loading"
           @change="handleCheckAllChange"
@@ -11,13 +12,11 @@
       <div class="header-left" :style="'padding-left:' + actionLeft">
 
         <slot name="first"></slot>
-        <Icon class="icon reload" icon="ion:reload" width="18" height="18" @click="refresh"/>
-        <Icon v-perm="'email:delete'" class="icon delete" icon="uiw:delete" width="16" height="16"
-              v-if="getSelectedMailsIds().length > 0"
-              @click="handleDelete"/>
-        <Icon v-perm="'email:delete'" class="icon delete" icon="fluent:mail-read-20-regular" width="21" height="21"
-              v-if="getSelectedMailsIds().length > 0 && showUnread"
-              @click="handleRead"/>
+        <button type="button" class="mail-list-action" aria-label="刷新邮件" @click="refresh"><Icon icon="ion:reload" width="18" height="18" /></button>
+        <button v-perm="'email:delete'" type="button" class="mail-list-action" aria-label="删除所选邮件"
+                v-if="getSelectedMailsIds().length > 0" @click="handleDelete"><Icon icon="uiw:delete" width="16" height="16" /></button>
+        <button v-perm="'email:delete'" type="button" class="mail-list-action" aria-label="将所选邮件标为已读"
+                v-if="getSelectedMailsIds().length > 0 && showUnread" @click="handleRead"><Icon icon="fluent:mail-read-20-regular" width="21" height="21" /></button>
       </div>
 
       <div class="header-right">
@@ -41,7 +40,7 @@
             <div :class="['email-row', props.type, { 'right-checked': item.rightChecked, 'is-current': selectedEmailId === item.emailId }]"
                  :data-checked="item.checked"
                  role="button" tabindex="0" :aria-label="item.subject"
-                 @keydown.enter="jumpDetails(item)"
+                 @keydown.enter.self="jumpDetails(item)"
                  @click="jumpDetails(item)"
                  v-if="!item.expand"
                  :key="item.emailId"
@@ -49,6 +48,7 @@
             >
               <el-checkbox :class=" props.type === 'all-email' ? 'all-email-checkbox' : 'checkbox'"
                            v-model="item.checked"
+                           :aria-label="'选择邮件 ' + item.subject"
                            :disabled="!item.checked && isSelectMax"
                            @click.stop></el-checkbox>
               <div @click.stop="starChange(item)" class="pc-star" v-if="showStar">

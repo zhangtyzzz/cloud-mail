@@ -1,34 +1,33 @@
 <template>
-  <div class="account-box">
+  <div class="account-box" :class="{ 'few-accounts': accounts.length <= 3 && noLoading }">
     <div class="head-opt">
-      <Icon v-perm="'account:add'" class="icon add" icon="ion:add-outline" width="23" height="23" @click="add"/>
-      <Icon class="icon refresh" icon="ion:reload" width="18" height="18" @click="refresh"/>
+      <h2>{{ settingStore.lang === 'en' ? 'MAILBOXES' : '邮箱账户' }}</h2>
+      <button v-perm="'account:add'" type="button" class="account-action" :aria-label="$t('addAccount')" @click="add"><Icon icon="ion:add-outline" width="23" height="23" /></button>
+      <button type="button" class="account-action" aria-label="刷新邮箱账户" @click="refresh"><Icon icon="ion:reload" width="18" height="18" /></button>
     </div>
     <el-scrollbar class="scrollbar" ref="scrollbarRef">
       <div v-infinite-scroll="getAccountList" :infinite-scroll-distance="600" :infinite-scroll-immediate="false">
         <el-card class="item" :class="itemBg(item.accountId)" v-for="(item, index) in accounts" :key="item.accountId"
-                 @click="changeAccount(item)" role="button" tabindex="0" :aria-label="item.email" @keydown.enter="changeAccount(item)">
-          <div class="account">
+                 @click="changeAccount(item)" role="button" tabindex="0" :aria-label="item.email" @keydown.enter.self="changeAccount(item)">
+          <div class="account" :title="item.email">
             {{ item.email }}
           </div>
           <div class="opt">
-            <div class="send-email" @click.stop>
-              <Icon @click="setAllReceive(item)" v-if="!item.allReceive" icon="lucide:mail" width="22" height="22" color="#fccb1a"/>
-              <Icon @click="setAllReceive(item)" v-else icon="lucide:inbox" width="22" height="22" color="#23c4f1" />
-            </div>
-            <div class="settings" @click.stop>
-              <Icon icon="lucide:copy" width="22" height="22" @click.stop="copyAccount(item.email)"/>
-              <Icon icon="lucide:ellipsis" width="21" height="21" color="#909399"
-                    v-if="showNullSetting(item)"/>
-              <el-dropdown v-else>
-                <Icon icon="lucide:ellipsis" width="21" height="21" color="#909399"/>
+            <button type="button" class="account-action send-email" @click.stop="setAllReceive(item)" @keydown.stop
+                    :aria-label="item.allReceive ? '切换为仅此邮箱来信' : '切换为全部邮箱来信'" :aria-pressed="!!item.allReceive"
+                    :title="item.allReceive ? '当前显示所有邮箱的来信，点击只看此邮箱' : '当前只显示此邮箱的来信，点击汇总全部邮箱'">
+              <Icon :icon="item.allReceive ? 'lucide:inbox' : 'lucide:mail'" width="18" height="18" />
+              <span>{{ settingStore.lang === 'en' ? (item.allReceive ? 'All mail' : 'This mailbox') : (item.allReceive ? '全部来信' : '仅此邮箱') }}</span>
+            </button>
+            <div class="settings" @click.stop @keydown.stop>
+              <button type="button" class="account-action" :aria-label="'复制邮箱地址 ' + item.email" @click.stop="copyAccount(item.email)"><Icon icon="lucide:copy" width="18" height="18" /></button>
+              <el-dropdown v-if="!showNullSetting(item)" :key="String(uiStore.asideShow)" trigger="click">
+                <button type="button" class="account-action" :aria-label="'邮箱设置 ' + item.email"><Icon icon="lucide:ellipsis" width="18" height="18" /></button>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item v-if="hasPerm('email:send')" @click="openSetName(item)">{{ $t('rename') }}</el-dropdown-item>
                     <el-dropdown-item v-if="item.accountId !== userStore.user.account.accountId" @click="setAsTop(item, index)">{{ $t('pin') }}</el-dropdown-item>
-                    <el-dropdown-item v-if="item.accountId !== userStore.user.account.accountId && hasPerm('account:delete')"
-                                      @click="remove(item)">{{ $t('delete') }}
-                    </el-dropdown-item>
+                    <el-dropdown-item v-if="item.accountId !== userStore.user.account.accountId && hasPerm('account:delete')" @click="remove(item)">{{ $t('delete') }}</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -75,7 +74,7 @@
       </div>
 
     </el-scrollbar>
-    <el-dialog v-model="showAdd" :title="$t('addAccount')">
+    <el-dialog append-to-body class="mailbox-dialog" v-model="showAdd" :title="$t('addAccount')">
       <div class="container">
         <el-input v-model="addForm.email" ref="addRef" type="text" :placeholder="$t('emailAccount')" autocomplete="off" @keyup.enter="submit">
           <template #append>
@@ -116,7 +115,7 @@
         <span style="font-size: 12px;color: #F56C6C" v-if="botJsError">{{ $t('verifyModuleFailed', {action: $t('add')}) }}</span>
       </div>
     </el-dialog>
-    <el-dialog v-model="setNameShow" :title="$t('changeUserName')">
+    <el-dialog append-to-body class="mailbox-dialog" v-model="setNameShow" :title="$t('changeUserName')">
       <div class="container">
         <el-input v-model="accountName" type="text" :placeholder="$t('username')" autocomplete="off" @keyup.enter="setName">
         </el-input>
@@ -144,6 +143,7 @@ import {useSettingStore} from "@/store/setting.js";
 import {useAccountStore} from "@/store/account.js";
 import {useEmailStore} from "@/store/email.js";
 import {useUserStore} from "@/store/user.js";
+import {useUiStore} from "@/store/ui.js";
 import {hasPerm} from "@/perm/perm.js"
 import {useI18n} from "vue-i18n";
 import {AccountAllReceiveEnum} from "@/enums/account-enum.js";
@@ -151,6 +151,7 @@ import {reloadTurnstileScript} from "@/utils/turnstile-script.js";
 
 const {t} = useI18n();
 const userStore = useUserStore();
+const uiStore = useUiStore();
 const accountStore = useAccountStore();
 const settingStore = useSettingStore();
 const emailStore = useEmailStore();

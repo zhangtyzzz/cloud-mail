@@ -73,7 +73,6 @@
       </div>
       </el-menu>
       <section class="mail-accounts" v-perm="'account:query'">
-        <h2>{{ settingStore.lang === 'en' ? 'MAILBOXES' : '邮箱账户' }}</h2>
         <AccountSelector />
       </section>
       <div class="sidebar-caption"><span class="status-dot"></span>{{ settingStore.lang === 'en' ? 'Your private mail, in one place.' : '每一封来信，都有归处。' }}</div>
