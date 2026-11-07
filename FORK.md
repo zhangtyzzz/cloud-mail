@@ -1,6 +1,6 @@
 # Tymee 的 Cloud Mail 定制
 
-上游项目：[maillab/cloud-mail](https://github.com/maillab/cloud-mail)。定制保存在本 fork 的 `tymee` 分支，上游更新可从 `upstream/main` 合并。
+上游项目：[maillab/cloud-mail](https://github.com/maillab/cloud-mail)。定制直接保存在本 fork 的默认分支 `main`，上游更新可从 `upstream/main` 合并。
 
 ## 已保存的改动
 
@@ -33,4 +33,4 @@ pnpm wrangler deploy --config wrangler.personal.jsonc
 
 机器人 Token、Resend Token 在邮箱管理后台配置，不写进源码。`.personal-secrets.json`、本地 Wrangler 配置及构建产物已加入忽略列表。
 
-本 fork 不代表已配置 GitHub 自动部署。当前线上更新通过本地 Wrangler 发布；上游自动部署工作流面向 `main`，不会因推送 `tymee` 分支触发。
+当前线上更新通过本地 Wrangler 发布，尚未配置本 fork 的 GitHub 自动部署凭据。仓库保留上游的 Actions 部署工作流，今后需要自动部署时再配置并启用。
