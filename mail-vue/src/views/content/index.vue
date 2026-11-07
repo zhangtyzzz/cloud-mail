@@ -1,14 +1,11 @@
 <template>
   <div class="box">
     <div class="header-actions">
-      <Icon class="icon" icon="material-symbols-light:arrow-back-ios-new" width="20" height="20" @click="handleBack"/>
-      <Icon v-perm="'email:delete'" class="icon" icon="uiw:delete" width="16" height="16" @click="handleDelete"/>
-      <span class="star" v-if="emailStore.contentData.showStar">
-        <Icon class="icon" @click="changeStar" v-if="email.isStar" icon="fluent-color:star-16" width="20" height="20"/>
-        <Icon class="icon" @click="changeStar" v-else icon="solar:star-line-duotone" width="18.5" height="18.5"/>
-      </span>
-      <Icon class="icon" v-if="emailStore.contentData.showReply" v-perm="'email:send'"  @click="openReply" icon="fluent-mdl2:reply" width="19" height="19" />
-      <Icon class="icon" v-if="emailStore.contentData.showReply" v-perm="'email:send'"  @click="openForward" icon="iconoir:arrow-up-right" width="20" height="20" />
+      <button class="reader-tool" aria-label="返回邮件列表" @click="handleBack"><Icon icon="material-symbols-light:arrow-back-ios-new" width="18" height="18" /></button>
+      <button class="reader-tool" v-perm="'email:delete'" :aria-label="$t('delete')" @click="handleDelete"><Icon icon="uiw:delete" width="16" height="16" /></button>
+      <button class="reader-tool" v-if="emailStore.contentData.showStar" :aria-label="email.isStar ? '取消星标' : '添加星标'" @click="changeStar"><Icon :icon="email.isStar ? 'fluent-color:star-16' : 'solar:star-line-duotone'" width="20" height="20" /></button>
+      <button class="reader-tool" v-if="emailStore.contentData.showReply" v-perm="'email:send'" :aria-label="$t('reply')" @click="openReply"><Icon icon="fluent-mdl2:reply" width="18" height="18" /></button>
+      <button class="reader-tool" v-if="emailStore.contentData.showReply" v-perm="'email:send'" :aria-label="$t('forward')" @click="openForward"><Icon icon="iconoir:arrow-up-right" width="20" height="20" /></button>
     </div>
     <div></div>
     <el-scrollbar class="scrollbar">
@@ -100,6 +97,8 @@ import {useUiStore} from "@/store/ui.js";
 import {useI18n} from "vue-i18n";
 import {EmailUnreadEnum} from "@/enums/email-enum.js";
 const { t } = useI18n()
+const props = defineProps({ embedded: Boolean })
+const emit = defineEmits(['close'])
 
 const uiStore = useUiStore();
 const settingStore = useSettingStore();
@@ -287,6 +286,7 @@ function changeStar() {
 }
 
 const handleBack = () => {
+  if (props.embedded) { emit('close'); return }
   router.back()
 }
 

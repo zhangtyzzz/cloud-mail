@@ -9,6 +9,9 @@ import {VitePWA} from 'vite-plugin-pwa';
 export default defineConfig(({mode}) => {
     const env = loadEnv(mode, process.cwd(), 'VITE')
     return {
+        define: {
+            'import.meta.env.VITE_UI_PREVIEW': JSON.stringify(mode === 'design' ? 'true' : ''),
+        },
         server: {
             host: true,
             port: 3001,
@@ -19,14 +22,14 @@ export default defineConfig(({mode}) => {
             VitePWA({
                 injectRegister: 'script-defer',
                 manifest: {
-                    name: env.VITE_PWA_NAME,
-                    short_name: env.VITE_PWA_NAME,
+                    name: env.VITE_PWA_NAME || 'Tymee Mail',
+                    short_name: env.VITE_PWA_NAME || 'Tymee Mail',
                     background_color: '#FFFFFF',
                     theme_color: '#FFFFFF',
                     icons: [
                         {
-                            src: 'mail-pwa.png',
-                            sizes: '192x192',
+                            src: 'tymee-glass-512.png',
+                            sizes: '512x512',
                             type: 'image/png',
                         }
                     ],

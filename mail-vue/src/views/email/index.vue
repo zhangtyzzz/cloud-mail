@@ -1,5 +1,8 @@
 <template>
-  <emailScroll ref="scroll"
+  <div class="inbox-workspace">
+    <section class="message-list-pane">
+      <div class="mailbox-heading"><div><span class="eyebrow">{{ settingStore.lang === 'en' ? 'YOUR MAIL' : '你的邮件' }}</span><h1>{{ settingStore.lang === 'en' ? 'Inbox' : '收件箱' }}</h1></div><span class="mailbox-date">{{ new Intl.DateTimeFormat(settingStore.lang === 'en' ? 'en-US' : 'zh-CN', {month: 'short', day: 'numeric'}).format(new Date()) }}</span></div>
+  <emailScroll ref="scroll" :compact="true" :selected-email-id="selectedId" :show-account-icon="false"
                :cancel-success="cancelStar"
                :star-success="addStar"
                :getEmailList="getEmailList"
@@ -13,6 +16,12 @@
                @jump="jumpContent"
   >
   </emailScroll>
+    </section>
+    <section class="reading-pane">
+      <ContentView v-if="selectedId" :embedded="true" @close="selectedId = null" />
+      <div v-else class="reader-welcome"><BrandMark /><h2>{{ settingStore.lang === 'en' ? 'A little space to focus.' : '留一点空间，专注来信。' }}</h2><p>{{ settingStore.lang === 'en' ? 'Choose a message to start reading.' : '选择一封邮件，在这里展开阅读。' }}</p></div>
+    </section>
+  </div>
 </template>
 
 <script setup>
@@ -20,6 +29,8 @@ import {useAccountStore} from "@/store/account.js";
 import {useEmailStore} from "@/store/email.js";
 import {useSettingStore} from "@/store/setting.js";
 import emailScroll from "@/components/email-scroll/index.vue"
+import ContentView from '@/views/content/index.vue'
+import BrandMark from '@/components/brand-mark/index.vue'
 import {emailList, emailDelete, emailLatest, emailRead} from "@/request/email.js";
 import {starAdd, starCancel} from "@/request/star.js";
 import {defineOptions, onMounted, ref, watch} from "vue";
@@ -36,6 +47,7 @@ const emailStore = useEmailStore();
 const accountStore = useAccountStore();
 const settingStore = useSettingStore();
 const scroll = ref({})
+const selectedId = ref(null)
 onMounted(() => {
   emailStore.emailScroll = scroll;
   latest()
@@ -43,12 +55,14 @@ onMounted(() => {
 
 
 watch(() => accountStore.currentAccountId, () => {
+  selectedId.value = null;
   scroll.value.refreshList();
 })
 
 watch(
   () => emailStore.searchParams,
   () => {
+    selectedId.value = null
     scroll.value.refreshList()
   },
   {deep: true}
@@ -60,7 +74,8 @@ function jumpContent(email) {
   emailStore.contentData.showUnread = true
   emailStore.contentData.showStar = true
   emailStore.contentData.showReply = true
-  router.push({name: 'content', params: {mailbox: 'inbox'}})
+  if (window.innerWidth >= 1100) selectedId.value = email.emailId
+  else router.push({name: 'content', params: {mailbox: 'inbox'}})
 }
 
 const existIds = new Set();

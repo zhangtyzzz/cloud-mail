@@ -2,6 +2,8 @@
   <el-container class="layout">
     <el-aside
         class="aside"
+        :inert="!uiStore.asideShow"
+        :aria-hidden="!uiStore.asideShow"
         :class="uiStore.asideShow ? 'aside-show' : 'el-aside-hide'">
       <Aside />
     </el-aside>

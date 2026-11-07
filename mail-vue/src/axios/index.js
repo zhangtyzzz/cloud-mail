@@ -7,6 +7,10 @@ let http = axios.create({
     baseURL: import.meta.env.VITE_BASE_URL
 });
 
+if (import.meta.env.DEV && import.meta.env.VITE_UI_PREVIEW === 'true') {
+    http.defaults.adapter = (await import('@/preview/mailbox.js')).adapter;
+}
+
 http.interceptors.request.use(config => {
     const { lang } = useSettingStore();
     config.headers.Authorization = `${localStorage.getItem('token')}`

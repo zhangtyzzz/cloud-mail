@@ -1,5 +1,5 @@
 <template>
-  <div class="send" v-show="show">
+  <div class="send compose-overlay" v-show="show">
     <div class="write-box">
       <div class="title">
         <div class="title-left">
@@ -10,9 +10,9 @@
           <span class="sender-name">{{ form.name }}</span>
           <span class="send-email"><{{ form.sendEmail }}></span>
         </div>
-        <div @click="close" style="cursor: pointer;">
+        <button type="button" class="compose-close" aria-label="关闭写信窗口" @click="close">
           <Icon icon="material-symbols-light:close-rounded" width="22" height="22"/>
-        </div>
+        </button>
       </div>
       <div class="container">
         <el-input-tag  @add-tag="addTagChange" tag-type="primary" @input="inputChange" size="default" v-model="form.receiveEmail" >

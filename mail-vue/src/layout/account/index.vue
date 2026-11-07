@@ -7,21 +7,21 @@
     <el-scrollbar class="scrollbar" ref="scrollbarRef">
       <div v-infinite-scroll="getAccountList" :infinite-scroll-distance="600" :infinite-scroll-immediate="false">
         <el-card class="item" :class="itemBg(item.accountId)" v-for="(item, index) in accounts" :key="item.accountId"
-                 @click="changeAccount(item)">
+                 @click="changeAccount(item)" role="button" tabindex="0" :aria-label="item.email" @keydown.enter="changeAccount(item)">
           <div class="account">
             {{ item.email }}
           </div>
           <div class="opt">
             <div class="send-email" @click.stop>
-              <Icon @click="setAllReceive(item)" v-if="!item.allReceive" icon="eva:email-fill" width="22" height="22" color="#fccb1a"/>
-              <Icon @click="setAllReceive(item)" v-else icon="flat-color-icons:folder" width="22" height="22" color="#23c4f1" />
+              <Icon @click="setAllReceive(item)" v-if="!item.allReceive" icon="lucide:mail" width="22" height="22" color="#fccb1a"/>
+              <Icon @click="setAllReceive(item)" v-else icon="lucide:inbox" width="22" height="22" color="#23c4f1" />
             </div>
             <div class="settings" @click.stop>
-              <Icon icon="fluent-color:clipboard-24" width="22" height="22" @click.stop="copyAccount(item.email)"/>
-              <Icon icon="fluent:settings-24-filled" width="21" height="21" color="#909399"
+              <Icon icon="lucide:copy" width="22" height="22" @click.stop="copyAccount(item.email)"/>
+              <Icon icon="lucide:ellipsis" width="21" height="21" color="#909399"
                     v-if="showNullSetting(item)"/>
               <el-dropdown v-else>
-                <Icon icon="fluent:settings-24-filled" width="21" height="21" color="#909399"/>
+                <Icon icon="lucide:ellipsis" width="21" height="21" color="#909399"/>
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item v-if="hasPerm('email:send')" @click="openSetName(item)">{{ $t('rename') }}</el-dropdown-item>
@@ -369,6 +369,7 @@ function refresh() {
 function changeAccount(account) {
   accountStore.currentAccountId = account.accountId
   accountStore.currentAccount = account
+  if (window.innerWidth < 1025) uiStore.asideShow = false
 }
 
 function add() {

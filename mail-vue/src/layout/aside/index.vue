@@ -2,7 +2,7 @@
   <el-scrollbar class="scroll">
     <div>
       <div class="title" :class="{ 'title-display': titleUsesDisplayFont }">
-        <img class="logo" :src="logoUrl" alt="" />
+        <BrandMark class="brand-mark" />
         <div>{{settingStore.settings.title}}</div>
       </div>
       <button v-perm="'email:send'" class="compose-bar" type="button" @click="openCompose">
@@ -35,6 +35,8 @@
           <Icon icon="fluent:settings-48-regular" width="20" height="20" />
           <span class="menu-name" style="margin-left: 16px">{{$t('settings')}}</span>
         </el-menu-item>
+        <button class="manage-toggle" @click="manageOpen = !manageOpen" :aria-expanded="manageOpen"><Icon icon="lucide:sliders-horizontal" width="17" />{{ $t('manage') }}<Icon :icon="manageOpen ? 'lucide:chevron-down' : 'lucide:chevron-right'" width="14" /></button>
+        <div v-show="manageOpen" class="management-items">
         <div class="manage-title" v-perm="['all-email:query','user:query','role:query','setting:query','analysis:query','reg-key:query']">
           <div>{{$t('manage')}}</div>
         </div>
@@ -68,14 +70,23 @@
           <Icon icon="eos-icons:system-ok-outlined" width="18" height="18" style="margin-left: 2px" />
           <span class="menu-name" style="margin-left: 17px">{{$t('SystemSettings')}}</span>
         </el-menu-item>
+      </div>
       </el-menu>
+      <section class="mail-accounts" v-perm="'account:query'">
+        <h2>{{ settingStore.lang === 'en' ? 'MAILBOXES' : '邮箱账户' }}</h2>
+        <AccountSelector />
+      </section>
+      <div class="sidebar-caption"><span class="status-dot"></span>{{ settingStore.lang === 'en' ? 'Your private mail, in one place.' : '每一封来信，都有归处。' }}</div>
     </div>
   </el-scrollbar>
 </template>
 
 <script setup>
 import router from "@/router/index.js";
-import {computed} from "vue";
+import {computed, ref} from "vue";
+import BrandMark from '@/components/brand-mark/index.vue';
+import AccountSelector from '@/layout/account/index.vue';
+const manageOpen = ref(false);
 import { useRoute } from "vue-router";
 import {Icon} from "@iconify/vue";
 import {useSettingStore} from "@/store/setting.js";

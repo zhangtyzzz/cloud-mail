@@ -1,5 +1,5 @@
 <template>
-  <div class="email-container">
+  <div class="email-container" :class="{ 'compact-list': compact }">
     <div class="header-actions">
       <el-checkbox
           v-model="checkAll"
@@ -38,8 +38,10 @@
                         :key="keyCount"
         >
           <template #default="{ data: item, index }" >
-            <div :class="['email-row', props.type, { 'right-checked': item.rightChecked }]"
+            <div :class="['email-row', props.type, { 'right-checked': item.rightChecked, 'is-current': selectedEmailId === item.emailId }]"
                  :data-checked="item.checked"
+                 role="button" tabindex="0" :aria-label="item.subject"
+                 @keydown.enter="jumpDetails(item)"
                  @click="jumpDetails(item)"
                  v-if="!item.expand"
                  :key="item.emailId"
@@ -249,6 +251,8 @@ import { UseVirtualList } from '@vueuse/components'
 import { useScroll } from '@vueuse/core'
 
 const props = defineProps({
+  compact: Boolean,
+  selectedEmailId: Number,
   getEmailList: Function,
   emailDelete: Function,
   emailRead: Function,
@@ -407,7 +411,7 @@ const itemHeight = computed(() => {
     if (props.type === 'all-email') {
       return isMobile.value ? 132 : 65;
     } else  {
-      return isMobile.value ? 83 : 48;
+      return props.compact ? 112 : (isMobile.value ? 83 : 48);
     }
 })
 
@@ -599,7 +603,7 @@ function starChange(email) {
 }
 
 function changeAccountShow() {
-  uiStore.accountShow = !uiStore.accountShow;
+  uiStore.asideShow = !uiStore.asideShow;
 }
 
 const handleRead = () => {

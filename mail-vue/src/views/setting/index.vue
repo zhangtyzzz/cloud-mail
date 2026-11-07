@@ -2,6 +2,7 @@
   <div class="settings-page">
     <el-scrollbar height="100%">
   <div class="box">
+    <div class="settings-page-heading"><span class="eyebrow">{{ settingStore.lang === 'en' ? 'PREFERENCES' : '偏好设置' }}</span><h1>{{ $t('settings') }}</h1><p>{{ settingStore.lang === 'en' ? 'Your account, appearance, and preferences.' : '账户、外观与语言，让邮箱更合你的习惯。' }}</p></div>
     <div class="container">
       <div class="title">{{$t('profile')}}</div>
       <div class="item setting-row">
@@ -66,7 +67,7 @@
         {{$t('delAccountMsg')}}
       </div>
       <div>
-        <el-button type="primary" @click="deleteConfirm">{{$t('deleteUserBtn')}}</el-button>
+        <el-button type="danger" plain @click="deleteConfirm">{{$t('deleteUserBtn')}}</el-button>
       </div>
     </div>
     <el-dialog v-model="pwdShow" :title="$t('changePassword')" width="340">
