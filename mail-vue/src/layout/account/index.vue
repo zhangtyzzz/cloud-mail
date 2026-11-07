@@ -5,20 +5,21 @@
       <button v-perm="'account:add'" type="button" class="account-action" :aria-label="$t('addAccount')" @click="add"><Icon icon="ion:add-outline" width="23" height="23" /></button>
       <button type="button" class="account-action" aria-label="刷新邮箱账户" @click="refresh"><Icon icon="ion:reload" width="18" height="18" /></button>
     </div>
+    <button type="button" class="all-mail-choice" :class="{ 'is-current': accountStore.viewAllMail }"
+            :aria-pressed="accountStore.viewAllMail" @click="showAllMail">
+      <Icon icon="lucide:inbox" width="18" height="18" />
+      <span>{{ settingStore.lang === 'en' ? 'All incoming mail' : '全部来信' }}</span>
+      <Icon v-if="accountStore.viewAllMail" class="scope-check" icon="lucide:check" width="16" height="16" />
+    </button>
     <el-scrollbar class="scrollbar" ref="scrollbarRef">
       <div v-infinite-scroll="getAccountList" :infinite-scroll-distance="600" :infinite-scroll-immediate="false">
         <el-card class="item" :class="itemBg(item.accountId)" v-for="(item, index) in accounts" :key="item.accountId"
-                 @click="changeAccount(item)" role="button" tabindex="0" :aria-label="item.email" @keydown.enter.self="changeAccount(item)">
+                 @click="changeAccount(item)" role="button" tabindex="0" :aria-label="item.email" :aria-pressed="!accountStore.viewAllMail && accountStore.currentAccountId === item.accountId" @keydown.enter.self="changeAccount(item)">
           <div class="account" :title="item.email">
             {{ item.email }}
           </div>
           <div class="opt">
-            <button type="button" class="account-action send-email" @click.stop="setAllReceive(item)" @keydown.stop
-                    :aria-label="item.allReceive ? '切换为仅此邮箱来信' : '切换为全部邮箱来信'" :aria-pressed="!!item.allReceive"
-                    :title="item.allReceive ? '当前显示所有邮箱的来信，点击只看此邮箱' : '当前只显示此邮箱的来信，点击汇总全部邮箱'">
-              <Icon :icon="item.allReceive ? 'lucide:inbox' : 'lucide:mail'" width="18" height="18" />
-              <span>{{ settingStore.lang === 'en' ? (item.allReceive ? 'All mail' : 'This mailbox') : (item.allReceive ? '全部来信' : '仅此邮箱') }}</span>
-            </button>
+            <span class="mailbox-kind"><Icon icon="lucide:mail" width="16" height="16" /><span>{{ item.name || (settingStore.lang === 'en' ? 'Mailbox' : '邮箱') }}</span></span>
             <div class="settings" @click.stop @keydown.stop>
               <button type="button" class="account-action" :aria-label="'复制邮箱地址 ' + item.email" @click.stop="copyAccount(item.email)"><Icon icon="lucide:copy" width="18" height="18" /></button>
               <el-dropdown v-if="!showNullSetting(item)" :key="String(uiStore.asideShow)" trigger="click">
@@ -134,7 +135,6 @@ import {
   accountAdd,
   accountDelete,
   accountSetName,
-  accountSetAllReceive,
   accountSetAsTop
 } from "@/request/account.js";
 import {sleep} from "@/utils/time-utils.js"
@@ -146,7 +146,7 @@ import {useUserStore} from "@/store/user.js";
 import {useUiStore} from "@/store/ui.js";
 import {hasPerm} from "@/perm/perm.js"
 import {useI18n} from "vue-i18n";
-import {AccountAllReceiveEnum} from "@/enums/account-enum.js";
+import router from "@/router";
 import {reloadTurnstileScript} from "@/utils/turnstile-script.js";
 
 const {t} = useI18n();
@@ -299,34 +299,12 @@ function openSetName(accountItem) {
   setNameShow.value = true
 }
 
-function setAllReceive(account) {
-  let allReceiveAccount = accounts.find(account => account.allReceive === AccountAllReceiveEnum.ENABLED);
-  if (allReceiveAccount && allReceiveAccount.accountId !== account.accountId) allReceiveAccount.allReceive = AccountAllReceiveEnum.DISABLED;
-  account.allReceive = account.allReceive === AccountAllReceiveEnum.DISABLED ? AccountAllReceiveEnum.ENABLED : AccountAllReceiveEnum.DISABLED;
-  accountSetAllReceive(account.accountId).catch(() => {
-    account.allReceive = account.allReceive === AccountAllReceiveEnum.DISABLED ? AccountAllReceiveEnum.ENABLED : AccountAllReceiveEnum.DISABLED;
-    if (allReceiveAccount) allReceiveAccount.allReceive = AccountAllReceiveEnum.ENABLED;
-  }).then(() => {
-    if (account.allReceive === AccountAllReceiveEnum.ENABLED) {
-      ElMessage({
-        message: t('setSuccess'),
-        type: 'success',
-        plain: true,
-      })
-    }
-    changeAccount(account);
-    emailStore.emailScroll?.refreshList();
-    emailStore.sendScroll?.refreshList();
-  })
-}
-
-
 function showNullSetting(item) {
   return !hasPerm('email:send') && !(item.accountId !== userStore.user.account.accountId && hasPerm('account:delete'))
 }
 
 function itemBg(accountId) {
-  return accountStore.currentAccountId === accountId ? 'item-choose' : ''
+  return !accountStore.viewAllMail && accountStore.currentAccountId === accountId ? 'item-choose' : ''
 }
 
 
@@ -368,8 +346,18 @@ function refresh() {
 }
 
 function changeAccount(account) {
-  accountStore.currentAccountId = account.accountId
-  accountStore.currentAccount = account
+  accountStore.selectMailbox(account, false)
+  openInbox()
+}
+
+function showAllMail() {
+  const account = accountStore.currentAccount.accountId ? accountStore.currentAccount : userStore.user.account
+  accountStore.selectMailbox(account, true)
+  openInbox()
+}
+
+function openInbox() {
+  router.push({name: 'email'})
   if (window.innerWidth < 1025) uiStore.asideShow = false
 }
 
@@ -439,9 +427,8 @@ function getAccountList() {
     if (list.length < queryParams.size) {
       noLoading.value = true
     }
-    if (accounts.length === 0) {
-      accountStore.currentAccount = list[0]
-    }
+    const current = list.find(item => item.accountId === accountStore.currentAccountId)
+    if (current) accountStore.currentAccount = current
 
     accounts.push(...list)
 

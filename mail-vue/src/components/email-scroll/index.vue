@@ -328,6 +328,8 @@ const scrollbarRef = ref(null)
 // iPad can report a Mac platform when requesting desktop websites.
 const isMacOS = /Mac/.test(navigator.platform) && navigator.maxTouchPoints <= 1
 let reqLock = false
+let requestVersion = 0
+let refreshPending = false
 let isMobile = ref(innerWidth < 1367)
 let skeletonRows = 0
 const timePaddingRight = ref('');
@@ -376,7 +378,12 @@ onActivated(() => {
   })
 })
 
+const handleResize = () => {
+  isMobile.value = window.innerWidth < 1367
+}
+
 onMounted(() => {
+  window.addEventListener('resize', handleResize)
   timer = setInterval(() => {
     emailList.forEach(email => {
       email.formatCreateTime = fromNow(email.createTime);
@@ -386,13 +393,12 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(timer)
+  window.removeEventListener('resize', handleResize)
+  requestVersion++
+  refreshPending = false
 })
 
 getEmailList()
-
-window.onresize = () => {
-  isMobile.value = innerWidth < 1367
-}
 
 function onScroll(e) {
   scrollTop = e.target.scrollTop;
@@ -814,11 +820,18 @@ function jumpDetails(email) {
 
 function getEmailList(refresh = false) {
 
-  if (reqLock) return;
+  if (reqLock) {
+    if (refresh) {
+      requestVersion++
+      refreshPending = true
+    }
+    return;
+  }
 
   let emailId = emailList.length > 0 ? emailList.at(-1).emailId : 0;
 
   reqLock = true
+  const version = ++requestVersion
 
   if (!refresh) {
 
@@ -847,6 +860,7 @@ function getEmailList(refresh = false) {
     if (duration < 300 && !emailId) {
         await sleep(300 - duration)
     }
+    if (version !== requestVersion) return
     firstLoad.value = false
 
     let list = data.list.map(item => ({
@@ -872,6 +886,10 @@ function getEmailList(refresh = false) {
   }).finally(() => {
     loading.value = false
     reqLock = false
+    if (refreshPending) {
+      refreshPending = false
+      getEmailList(true)
+    }
   })
 }
 

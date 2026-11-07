@@ -1,7 +1,7 @@
 <template>
   <div class="inbox-workspace">
     <section class="message-list-pane">
-      <div class="mailbox-heading"><div><span class="eyebrow">{{ settingStore.lang === 'en' ? 'YOUR MAIL' : '你的邮件' }}</span><h1>{{ settingStore.lang === 'en' ? 'Inbox' : '收件箱' }}</h1></div><span class="mailbox-date">{{ new Intl.DateTimeFormat(settingStore.lang === 'en' ? 'en-US' : 'zh-CN', {month: 'short', day: 'numeric'}).format(new Date()) }}</span></div>
+      <div class="mailbox-heading"><div><span class="eyebrow">{{ settingStore.lang === 'en' ? 'YOUR MAIL' : '你的邮件' }}</span><h1>{{ settingStore.lang === 'en' ? 'Inbox' : '收件箱' }}</h1><p class="mailbox-scope" :title="accountStore.viewAllMail ? (settingStore.lang === 'en' ? 'All mailboxes' : '全部邮箱') : accountStore.currentAccount.email">{{ accountStore.viewAllMail ? (settingStore.lang === 'en' ? 'All mailboxes' : '全部邮箱') : accountStore.currentAccount.email }}</p></div><span class="mailbox-date">{{ new Intl.DateTimeFormat(settingStore.lang === 'en' ? 'en-US' : 'zh-CN', {month: 'short', day: 'numeric'}).format(new Date()) }}</span></div>
   <emailScroll ref="scroll" :compact="true" :selected-email-id="selectedId" :show-account-icon="false"
                :cancel-success="cancelStar"
                :star-success="addStar"
@@ -54,7 +54,7 @@ onMounted(() => {
 })
 
 
-watch(() => accountStore.currentAccountId, () => {
+watch(() => accountStore.mailboxScopeKey, () => {
   selectedId.value = null;
   scroll.value.refreshList();
 })
@@ -109,7 +109,7 @@ async function latest() {
         }
 
         //确保请求回来后，账号没有切换，时间排序没有改变，全部邮件类型没变
-        if (accountId === accountStore.currentAccountId && allReceive === accountStore.currentAccount.allReceive) {
+        if (accountId === accountStore.currentAccountId && allReceive === accountStore.allReceive) {
           if (list.length > 0) {
             emailStore.applyFullList(list)
 
@@ -151,7 +151,7 @@ function cancelStar(email) {
 
 function getEmailList(emailId, size) {
   const accountId =  accountStore.currentAccountId;
-  const allReceive = accountStore.currentAccount.allReceive;
+  const allReceive = accountStore.allReceive;
   return emailStore.fetchList(full =>
     emailList(accountId, allReceive, emailId, 0, size, 0, full, emailStore.searchParams)
   ).then(data => {

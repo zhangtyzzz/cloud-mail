@@ -80,13 +80,13 @@ export const useEmailStore = defineStore('email', {
                 recipient: email?.recipient || '[]',
             }
         },
-        markListRead(emailId) {
+        markListRead(emailId, unread = EmailUnreadEnum.READ) {
             const scrolls = [this.emailScroll, this.starScroll, this.sendScroll]
             for (const scroll of scrolls) {
                 const list = scroll?.emailList
                 if (!list?.length) continue
                 const item = list.find(e => e.emailId === emailId)
-                if (item) item.unread = EmailUnreadEnum.READ
+                if (item) item.unread = unread
             }
         },
     },

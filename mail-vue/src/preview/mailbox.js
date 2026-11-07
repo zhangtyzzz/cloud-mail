@@ -60,13 +60,22 @@ export async function adapter(config) {
   else if (path === '/logout') data = null;
   else if (path === '/my/loginUserInfo') data = { ...user };
   else if (path === '/account/list') data = params.accountId ? [] : [...accounts];
-  else if (path === '/account/setAllReceive') { const a = accounts.find(a => a.accountId === body.accountId); if (a) a.allReceive = a.allReceive ? 0 : 1; }
+  else if (path === '/account/setAllReceive') {
+    const a = accounts.find(a => a.accountId === Number(body.accountId));
+    if (a) {
+      const next = a.allReceive ? 0 : 1;
+      accounts.forEach(item => { item.allReceive = 0; });
+      a.allReceive = next;
+    }
+  }
   else if (path === '/account/setName') { const a = accounts.find(a => a.accountId === body.accountId); if (a) a.name = body.name; }
   else if (path === '/account/add') { data = { ...accounts[0], email: body.email, accountId: accounts.length + 1, allReceive: 0 }; accounts.push(data); }
   else if (path === '/email/list' || path === '/star/list' || path === '/allEmail/list') {
     let list = messages.filter(m => !m.isDel);
     if (Number(params.type) === 1) list = [];
-    if (!Number(params.allReceive) && params.accountId) list = list.filter(m => m.accountId === Number(params.accountId));
+    const scope = Number(params.allReceive);
+    const allReceive = Number.isNaN(scope) ? accounts.find(a => a.accountId === Number(params.accountId))?.allReceive : scope;
+    if (!allReceive && params.accountId) list = list.filter(m => m.accountId === Number(params.accountId));
     if (path === '/star/list') list = list.filter(m => m.isStar);
     if (params.emailId) list = list.filter(m => m.emailId < Number(params.emailId));
     if (params.text) list = list.filter(m => `${m.subject} ${m.text} ${m.name}`.toLowerCase().includes(String(params.text).toLowerCase()));
@@ -81,5 +90,5 @@ export async function adapter(config) {
   else if (path === '/draft/add' || path === '/draft/set') data = { draftId: 1, ...body };
   else if (path.endsWith('/list') || path.endsWith('/tree')) data = [];
   else if (path === '/analysis/echarts') data = {};
-  return { data: { code, data, message }, status: 200, statusText: 'OK', headers: {}, config };
+  return { data: structuredClone({ code, data, message }), status: 200, statusText: 'OK', headers: {}, config };
 }

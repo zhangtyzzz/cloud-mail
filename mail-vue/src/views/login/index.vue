@@ -150,7 +150,7 @@
 <script setup>
 import BrandMark from '@/components/brand-mark/index.vue';
 const isPreview = import.meta.env.DEV && import.meta.env.VITE_UI_PREVIEW === 'true';
-function previewLogin() { form.email = 'hello@example.com'; form.password = 'preview-only'; submit(); }
+function previewLogin() { if (!isPreview) return; form.email = 'hello@example.com'; form.password = 'preview-only'; submit(); }
 import router from "@/router";
 import {useRoute} from "vue-router";
 import {computed, nextTick, reactive, ref} from "vue";
@@ -466,8 +466,7 @@ async function saveToken(token) {
   localStorage.setItem('token', token)
   refreshWebsiteConfig()
   const user = await loginUserInfo();
-  accountStore.currentAccountId = user.account.accountId;
-  accountStore.currentAccount = user.account;
+  accountStore.selectMailbox(user.account, true);
   userStore.user = user;
   const routers = permsToRouter(user.permKeys);
   routers.forEach(routerData => {

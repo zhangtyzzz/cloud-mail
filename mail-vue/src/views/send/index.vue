@@ -37,7 +37,7 @@ onMounted(() => {
   emailStore.sendScroll = sendScroll;
 })
 
-watch(() => accountStore.currentAccountId, () => {
+watch(() => accountStore.mailboxScopeKey, () => {
   sendScroll.value.refreshList();
 })
 
@@ -67,7 +67,7 @@ function cancelStar(email) {
 
 function getEmailList(emailId, size) {
   const accountId =  accountStore.currentAccountId;
-  const allReceive = accountStore.currentAccount.allReceive;
+  const allReceive = accountStore.allReceive;
   return emailStore.fetchList(full =>
     emailList(accountId, allReceive, emailId, 0, size, 1, full, sendStore.searchParams)
   ).then(data => {

@@ -2,8 +2,8 @@
   <div class="box">
     <div class="header-actions">
       <button class="reader-tool" aria-label="返回邮件列表" @click="handleBack"><Icon icon="material-symbols-light:arrow-back-ios-new" width="18" height="18" /></button>
-      <button class="reader-tool" v-perm="'email:delete'" :aria-label="$t('delete')" @click="handleDelete"><Icon icon="uiw:delete" width="16" height="16" /></button>
-      <button class="reader-tool" v-if="emailStore.contentData.showStar" :aria-label="email.isStar ? '取消星标' : '添加星标'" @click="changeStar"><Icon :icon="email.isStar ? 'fluent-color:star-16' : 'solar:star-line-duotone'" width="20" height="20" /></button>
+      <button class="reader-tool" :disabled="deletePending" v-perm="'email:delete'" :aria-label="$t('delete')" @click="handleDelete"><Icon icon="uiw:delete" width="16" height="16" /></button>
+      <button class="reader-tool" :disabled="starPending.has(email.emailId)" v-if="emailStore.contentData.showStar" :aria-label="email.isStar ? '取消星标' : '添加星标'" @click="changeStar"><Icon :icon="email.isStar ? 'fluent-color:star-16' : 'solar:star-line-duotone'" width="20" height="20" /></button>
       <button class="reader-tool" v-if="emailStore.contentData.showReply" v-perm="'email:send'" :aria-label="$t('reply')" @click="openReply"><Icon icon="fluent-mdl2:reply" width="18" height="18" /></button>
       <button class="reader-tool" v-if="emailStore.contentData.showReply" v-perm="'email:send'" :aria-label="$t('forward')" @click="openForward"><Icon icon="iconoir:arrow-up-right" width="20" height="20" /></button>
     </div>
@@ -105,6 +105,9 @@ const settingStore = useSettingStore();
 const accountStore = useAccountStore();
 const emailStore = useEmailStore();
 const router = useRouter()
+let readerActive = true
+const starPending = reactive(new Set())
+const deletePending = ref(false)
 const sendNameRef = ref(null)
 const senderWrapped = ref(false)
 let senderResizeObserver = null
@@ -130,11 +133,11 @@ const sentViaEmail = computed(() => {
   return address
 })
 
-watch(() => accountStore.currentAccountId, () => {
-  handleBack()
+watch(() => accountStore.mailboxScopeKey, () => {
+  if (props.embedded) emit('close')
 })
 
-let readRequesting = false
+const readRequesting = new Set()
 
 function contentWidth(el) {
   const range = document.createRange()
@@ -162,24 +165,30 @@ function updateSenderWrap() {
 
 
 function tryMarkRead() {
-  if (!emailStore.contentData.showUnread || readRequesting) return
+  if (!emailStore.contentData.showUnread) return
   const current = email.value
-  if (!current?.emailId || current.unread !== EmailUnreadEnum.UNREAD) return
+  if (!current?.emailId || current.unread !== EmailUnreadEnum.UNREAD || readRequesting.has(current.emailId)) return
 
   // 等详情数据就绪（detailMap 已写入，或正文已有内容）再标已读
   const full = emailStore.detailMap[current.emailId]
   const detailReady = !!full || !!(current.content || current.text)
   if (!detailReady) return
 
-  readRequesting = true
   const emailId = current.emailId
+  readRequesting.add(emailId)
   current.unread = EmailUnreadEnum.READ
   if (emailStore.detailMap[emailId]) {
     emailStore.detailMap[emailId].unread = EmailUnreadEnum.READ
   }
   emailStore.markListRead(emailId)
-  emailRead([emailId]).finally(() => {
-    readRequesting = false
+  emailRead([emailId]).catch(error => {
+    current.unread = EmailUnreadEnum.UNREAD
+    if (emailStore.detailMap[emailId]) emailStore.detailMap[emailId].unread = EmailUnreadEnum.UNREAD
+    if (email.value.emailId === emailId) email.value.unread = EmailUnreadEnum.UNREAD
+    emailStore.markListRead(emailId, EmailUnreadEnum.UNREAD)
+    console.error(error)
+  }).finally(() => {
+    readRequesting.delete(emailId)
   })
 }
 
@@ -209,7 +218,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   emailStore.contentData.showUnread = false;
-  readRequesting = false
+  readerActive = false
   window.removeEventListener('keydown', handleKeyDown);
   senderResizeObserver?.disconnect()
 })
@@ -259,29 +268,32 @@ function formateReceive(recipient) {
   return recipient.map(item => item.address).join(', ')
 }
 
-function changeStar() {
-  if (email.value.isStar) {
-    email.value.isStar = 0;
-    starCancel(email.value.emailId).then(() => {
-      email.value.isStar = 0;
-      emailStore.cancelStarEmailId = email.value.emailId
-      setTimeout(() => emailStore.cancelStarEmailId = 0)
-      emailStore.starScroll?.deleteEmail([email.value.emailId])
-    }).catch((e) => {
-      console.error(e)
-      email.value.isStar = 1;
-    })
-  } else {
-    email.value.isStar = 1;
-    starAdd(email.value.emailId).then(() => {
-      email.value.isStar = 1;
-      emailStore.addStarEmailId = email.value.emailId
-      setTimeout(() => emailStore.addStarEmailId = 0)
-      emailStore.starScroll?.addItem(email.value)
-    }).catch((e) => {
-      console.error(e)
-      email.value.isStar = 0;
-    })
+async function changeStar() {
+  const target = email.value
+  const emailId = target.emailId
+  if (!emailId || starPending.has(emailId)) return
+  const previous = target.isStar ? 1 : 0
+  const next = previous ? 0 : 1
+  const updateTarget = value => {
+    target.isStar = value
+    if (emailStore.detailMap[emailId]) emailStore.detailMap[emailId].isStar = value
+    if (email.value.emailId === emailId) email.value.isStar = value
+  }
+  starPending.add(emailId)
+  updateTarget(next)
+  try {
+    await (next ? starAdd(emailId) : starCancel(emailId))
+    updateTarget(next)
+    const eventKey = next ? 'addStarEmailId' : 'cancelStarEmailId'
+    emailStore[eventKey] = emailId
+    setTimeout(() => { if (emailStore[eventKey] === emailId) emailStore[eventKey] = 0 })
+    if (next) emailStore.starScroll?.addItem(emailStore.detailMap[emailId] || target)
+    else emailStore.starScroll?.deleteEmail([emailId])
+  } catch (error) {
+    updateTarget(previous)
+    console.error(error)
+  } finally {
+    starPending.delete(emailId)
   }
 }
 
@@ -290,36 +302,28 @@ const handleBack = () => {
   router.back()
 }
 
-const handleDelete = () => {
-  ElMessageBox.confirm(t('delEmailConfirm'), {
-    confirmButtonText: t('confirm'),
-    cancelButtonText: t('cancel'),
-    type: 'warning'
-  }).then(() => {
-    if (emailStore.contentData.delType === 'logic') {
-      emailDelete(email.value.emailId).then(() => {
-        ElMessage({
-          message: t('delSuccessMsg'),
-          type: 'success',
-          plain: true,
-        })
-        emailStore.deleteIds = [email.value.emailId]
-      })
-    } else  {
-
-      allEmailDelete(email.value.emailId).then(() => {
-        ElMessage({
-          message: t('delSuccessMsg'),
-          type: 'success',
-          plain: true,
-        })
-        emailStore.deleteIds = [email.value.emailId]
-      })
-    }
-
-    router.back()
-  })
+const handleDelete = async () => {
+  if (deletePending.value || !email.value.emailId) return
+  const emailId = email.value.emailId
+  const delType = emailStore.contentData.delType
+  deletePending.value = true
+  try {
+    await ElMessageBox.confirm(t('delEmailConfirm'), {
+      confirmButtonText: t('confirm'),
+      cancelButtonText: t('cancel'),
+      type: 'warning'
+    })
+    await (delType === 'logic' ? emailDelete(emailId) : allEmailDelete(emailId))
+    ElMessage({ message: t('delSuccessMsg'), type: 'success', plain: true })
+    emailStore.deleteIds = [emailId]
+    if (readerActive && email.value.emailId === emailId) handleBack()
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') console.error(error)
+  } finally {
+    deletePending.value = false
+  }
 }
+
 </script>
 <style scoped lang="scss">
 .box {
