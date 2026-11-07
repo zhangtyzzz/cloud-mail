@@ -14,6 +14,8 @@ import emailHtmlTemplate from '../template/email-html';
 import verifyUtils from '../utils/verify-utils';
 import domainUtils from "../utils/domain-uitls";
 
+const TELEGRAM_LINK_TTL_SECONDS = 24 * 60 * 60;
+
 const telegramService = {
 
 	async getEmailContent(c, params) {
@@ -49,7 +51,7 @@ const telegramService = {
 
 		const tgChatIds = tgChatId.split(',');
 
-		const jwtToken = await jwtUtils.generateToken(c, { emailId: email.emailId })
+		const jwtToken = await jwtUtils.generateToken(c, { emailId: email.emailId }, TELEGRAM_LINK_TTL_SECONDS)
 
 		const webAppUrl = customDomain ? `${domainUtils.toOssDomain(customDomain)}/api/telegram/getEmail/${jwtToken}` : 'https://www.cloudflare.com/404'
 		const inlineKeyboard = [

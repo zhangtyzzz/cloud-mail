@@ -74,7 +74,7 @@ const jwtUtils = {
 			const payload = JSON.parse(payloadJson);
 
 			const now = Math.floor(Date.now() / 1000);
-			if (payload.exp && payload.exp < now) return null;
+			if (payload.exp && payload.exp <= now) return null;
 
 			return payload;
 

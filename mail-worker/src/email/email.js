@@ -71,6 +71,10 @@ export async function email(message, env, ctx) {
 			}
 		}
 
+		if (!account && env.personal_catch_all === true && env.domain.includes(emailUtils.getDomain(message.to))) {
+			account = await accountService.selectByEmailIncludeDel({ env }, env.admin);
+		}
+
 		if (!account && noRecipient === settingConst.noRecipient.CLOSE) {
 			message.setReject('Recipient not found');
 			return;

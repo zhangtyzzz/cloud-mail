@@ -26,3 +26,14 @@ mail-vue/dist
 .wrangler
 .venv
 git-tools.js
+
+# Local deployment files and credentials
+bundle/
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+mail-worker/.personal-secrets.json
+mail-worker/wrangler.personal.jsonc
+mail-worker/wrangler.verify.jsonc
